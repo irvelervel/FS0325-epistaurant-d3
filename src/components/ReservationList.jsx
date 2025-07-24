@@ -24,7 +24,17 @@
 // disegnerà questi elementi nella lista, e finirà il secondo render().
 
 import { Component } from 'react'
-import { Container, Row, Col, ListGroup } from 'react-bootstrap'
+import {
+  Container,
+  Row,
+  Col,
+  ListGroup,
+  Spinner,
+  Alert,
+  Button,
+} from 'react-bootstrap'
+
+import { TrashFill } from 'react-bootstrap-icons'
 
 // ogni componente React potrà decidere in autonomia di effettuare operazioni
 // al suo AVVIO
@@ -34,6 +44,9 @@ class ReservationList extends Component {
     reservations: [],
     // se io trovassi il modo di recuperare le prenotazioni e inserirle in questo array...
     // ... React riempirebbe la ListGroup automaticamente!
+    // creo ora una variabile per memorizzare la condizione di caricamento
+    isLoading: true,
+    isError: false,
   }
 
   // creo la funzione per la chiamata GET
@@ -55,10 +68,39 @@ class ReservationList extends Component {
         this.setState({
           reservations: arrayOfReservations, // sostituisco nello state l'array
           // di prenotazioni recuperato dalle API
+          isLoading: false, // spengo lo Spinner nel caso l'operazione
+          // asincrona sia finita "bene"
         })
       })
       .catch((err) => {
         console.log('ERRORE', err)
+        this.setState({
+          isLoading: false, // spengo lo Spinner anche nel caso l'operazione
+          // asincrona sia finita "male"
+          isError: true,
+        })
+      })
+  }
+
+  deleteReservation = (idDaEliminare) => {
+    // questa funzione si occuperà di eliminare una singola prenotazione
+    // con una chiamata con metodo "DELETE" alle API
+    fetch(
+      'https://striveschool-api.herokuapp.com/api/reservation/' + idDaEliminare,
+      {
+        method: 'DELETE',
+      }
+    )
+      .then((response) => {
+        if (response.ok) {
+          // eliminazione avvenuta con successo
+          this.getReservations()
+        } else {
+          throw new Error('Errore in fase di eliminazione')
+        }
+      })
+      .catch((err) => {
+        console.log('ERRORE ELIMINAZIONE', err)
       })
   }
 
@@ -99,12 +141,55 @@ class ReservationList extends Component {
         </Row>
         <Row className="justify-content-center mt-3">
           <Col xs={12} md={8} lg={6}>
+            {/* spinner per indicare il caricamento in corso */}
+            {this.state.isLoading && (
+              <div className="text-center mb-3">
+                <Spinner animation="border" variant="success" />
+              </div>
+            )}
+            {this.state.isError && (
+              <Alert variant="danger" className="text-center">
+                Errore nel recupero prenotazioni 😥
+              </Alert>
+            )}
+            {this.state.reservations.length === 0 &&
+              !this.state.isLoading &&
+              !this.state.isError && (
+                <Alert variant="info" className="text-center">
+                  Al momento non ci sono prenotazioni
+                </Alert>
+              )}
             <ListGroup>
               {this.state.reservations.map((prenotazione) => {
                 return (
-                  <ListGroup.Item key={prenotazione._id}>
-                    {prenotazione.name} per {prenotazione.numberOfPeople} alle{' '}
-                    {prenotazione.dateTime}
+                  <ListGroup.Item
+                    key={prenotazione._id}
+                    className="d-flex justify-content-between align-items-center"
+                  >
+                    <div>
+                      {prenotazione.name} per {prenotazione.numberOfPeople} -{' '}
+                      {new Date(prenotazione.dateTime).toLocaleDateString(
+                        'it-IT',
+                        {
+                          hour: 'numeric',
+                          minute: 'numeric',
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                        }
+                      )}
+                    </div>
+                    <div>
+                      <Button
+                        variant="danger"
+                        onClick={() => {
+                          this.deleteReservation(prenotazione._id)
+                        }}
+                      >
+                        <TrashFill />
+                      </Button>
+                    </div>
                   </ListGroup.Item>
                 )
               })}
