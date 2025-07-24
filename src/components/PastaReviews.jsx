@@ -1,5 +1,9 @@
 import { ListGroup } from 'react-bootstrap'
 
+// questo componente mostra sempre le recensioni della pasta attiva
+// perchè quando in Home si setta lo stato con una nuova activePasta
+// lui riceve nuove props!
+
 const PastaReviews = (props) => {
   return (
     <ListGroup>
